@@ -1,0 +1,47 @@
+int count;
+volatile bool pulseFlag;
+unsigned long newTime;
+unsigned long oldTime;
+unsigned long velocity;
+unsigned long deltaT;
+const byte interruptPin = 3;
+
+
+
+
+void setup() {
+Serial.begin(115200);
+oldTime = 0;
+newTime = 0;
+pinMode(6, OUTPUT);
+digitalWrite(6, LOW);
+pinMode(interruptPin, INPUT_PULLUP);
+attachInterrupt(digitalPinToInterrupt(interruptPin), setFlag, FALLING);
+
+}
+
+void loop() {
+  if (pulseFlag == true){
+    oldTime = newTime;
+    deltaT = newTime - oldTime;
+    velocity = 1400 / deltaT;
+    if (oldTime != 0) {
+      txData();
+    }
+    else {
+      oldTime = newTime;
+      pulseFlag = false;
+      Serial.println("Error");
+    }
+  }
+}
+
+void setFlag() {
+  pulseFlag = true;
+  newTime = millis();
+  }
+
+void txData (){
+  Serial.println(velocity); 
+  pulseFlag = false;
+}
