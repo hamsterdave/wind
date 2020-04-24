@@ -1,0 +1,83 @@
+#include <TimerThree.h>
+
+const byte interruptPin = 3;
+volatile bool pulseFlag;
+volatile bool runFlag;
+volatile unsigned long newTime;
+volatile unsigned long oldTime;
+volatile unsigned long newDeltaT;
+volatile unsigned long oldDeltaT;
+unsigned long oldVelocity;
+unsigned long newVelocity;
+long deltaV;
+unsigned long otCopy;
+unsigned long ntCopy;
+uint8_t pulseCount;
+
+void setup() {
+  Serial.begin(115200);
+  Timer3.initialize(5000); //initialize timer3 with for 5mS (200Hz)
+  Timer3.attachInterrupt(timeCheck); //call timeCheck function on compare match
+  pulseCount = 0;
+  oldTime = 0;
+  newTime = 0;
+  pinMode(6, OUTPUT);
+  digitalWrite(6, LOW);
+  pinMode(interruptPin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(interruptPin), readTime, FALLING);
+}
+
+
+void readTime() {
+  noInterrupts();
+  oldTime = newTime;
+  newTime = millis(); //record time of pulse from timer1
+  pulseCount ++; // increment a pulse count byte. 0 = wait for another pulse, 1 = do stuff, >1 = missed pulses
+  pulseFlag = true;
+  interrupts();
+}
+
+
+void timeCheck() {
+  noInterrupts();
+  if (pulseFlag == true) {
+    
+    switch (pulseCount) {      
+      case '1':        
+        runFlag = false;
+        break;
+      case '2':        
+        runFlag = true;
+        pulseCount = 1;
+      default:
+        runFlag = false;
+        pulseCount = 0;
+    }
+    pulseFlag = false;
+  }
+  interrupts();
+}
+  
+  
+
+void loop() {
+  if (runFlag == true) {    
+    noInterrupts();
+    otCopy = oldTime; //copy shared data to a safe place to math it
+    ntCopy = newTime;
+    interrupts();
+    oldDeltaT = newDeltaT; //math stuff
+    newDeltaT = ntCopy - otCopy;    
+    oldVelocity = newVelocity;    
+    newVelocity = 1400 / newDeltaT;
+    deltaV = newVelocity - oldVelocity;
+    
+/* print out the mathed stuff */
+    Serial.print("Velocity: "); Serial.print(newVelocity); Serial.println("MPH");
+    Serial.print("DeltaV: "); Serial.print(deltaV); Serial.println("MPH");
+    Serial.print("Time Between Pulses: "); Serial.print(newDeltaT); Serial.println("mS"); 
+    runFlag = false; // reset run flag and wait for another pulse
+  } 
+
+}
+
